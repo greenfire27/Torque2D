@@ -69,3 +69,4 @@ engine/compilers/android/bin/
 engine/compilers/android/gen/
 engine/compilers/android/obj/
 
+msvcr100d.dll
