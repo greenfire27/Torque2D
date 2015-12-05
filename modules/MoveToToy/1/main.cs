@@ -27,11 +27,11 @@ function MoveToToy::create( %this )
     MoveToToy.trackMouse = true;
 
     // Add the custom controls.
-    addNumericOption("Move Speed", 1, 150, 1, "setMoveSpeed", MoveToToy.moveSpeed, true, "Sets the linear speed to use when moving to the target position.");
+    addNumericOption("Move Speed", 1, 1000, 1, "setMoveSpeed", MoveToToy.moveSpeed, true, "Sets the linear speed to use when moving to the target position.");
     addFlagOption("Track Mouse", "setTrackMouse", MoveToToy.trackMouse, false, "Whether to track the position of the mouse or not." );
 
     // Reset the toy initially.
-    MoveToToy.reset();        
+    MoveToToy.reset();
 }
 
 //-----------------------------------------------------------------------------
@@ -46,13 +46,13 @@ function MoveToToy::reset( %this )
 {
     // Clear the scene.
     SandboxScene.clear();
-    
+
     // Create background.
     %this.createBackground();
 
     // Create target.
     %this.createTarget();
-    
+
     // Create sight.
     %this.createSight();
 }
@@ -60,32 +60,32 @@ function MoveToToy::reset( %this )
 //-----------------------------------------------------------------------------
 
 function MoveToToy::createBackground( %this )
-{    
+{
     // Create the sprite.
     %object = new Sprite();
-    
+
     // Set the sprite as "static" so it is not affected by gravity.
     %object.setBodyType( static );
-       
+
     // Always try to configure a scene-object prior to adding it to a scene for best performance.
 
     // Set the position.
     %object.Position = "0 0";
 
-    // Set the size.        
+    // Set the size.
     %object.Size = "100 75";
-    
+
     // Set to the furthest background layer.
     %object.SceneLayer = 31;
-    
+
     // Set an image.
     %object.Image = "ToyAssets:highlightBackground";
-    
+
     // Set the blend color.
     %object.BlendColor = SlateGray;
-            
+
     // Add the sprite to the scene.
-    SandboxScene.add( %object );    
+    SandboxScene.add( %object );
 }
 
 //-----------------------------------------------------------------------------
@@ -94,27 +94,27 @@ function MoveToToy::createSight( %this )
 {
     // Create the sprite.
     %object = new Sprite();
-    
+
     // Set the sight object.
     MoveToToy.SightObject = %object;
-    
+
     // Set the static image.
     %object.Image = "ToyAssets:Crosshair2";
 
     // Set the blend color.
     %object.BlendColor = Lime;
-    
+
     // Set the transparency.
     %object.setBlendAlpha( 0.5 );
-    
+
     // Set a useful size.
     %object.Size = 40;
-    
+
     // Set the sprite rotating to make it more interesting.
     %object.AngularVelocity = -90;
-    
+
     // Add to the scene.
-    SandboxScene.add( %object );    
+    SandboxScene.add( %object );
 }
 
 //-----------------------------------------------------------------------------
@@ -126,21 +126,21 @@ function MoveToToy::createTarget( %this )
 
     // Set the target object.
     MoveToToy.TargetObject = %object;
-    
+
     // Set the static image.
     %object.Image = "ToyAssets:Crosshair3";
-    
+
     // Set the blend color.
     %object.BlendColor = DarkOrange;
-    
+
     // Set a useful size.
     %object.Size = 20;
-        
+
     // Set the sprite rotating to make it more interesting.
     %object.AngularVelocity = 60;
-    
+
     // Add to the scene.
-    SandboxScene.add( %object );    
+    SandboxScene.add( %object );
 }
 
 //-----------------------------------------------------------------------------
@@ -163,9 +163,9 @@ function MoveToToy::onTouchDown(%this, %touchID, %worldPosition)
 {
     // Set the target to the touched position.
     MoveToToy.TargetObject.Position = %worldPosition;
-    
+
     // Move the sight to the touched position.
-    MoveToToy.SightObject.MoveTo( %worldPosition, MoveToToy.moveSpeed );
+    MoveToToy.SightObject.MoveTo( %worldPosition, MoveToToy.moveSpeed, true, true );
 }
 
 //-----------------------------------------------------------------------------
@@ -175,10 +175,31 @@ function MoveToToy::onTouchDragged(%this, %touchID, %worldPosition)
     // Finish if not tracking the mouse.
     if ( !MoveToToy.trackMouse )
         return;
-        
+
     // Set the target to the touched position.
     MoveToToy.TargetObject.Position = %worldPosition;
-    
+
     // Move the sight to the touched position.
-    MoveToToy.SightObject.MoveTo( %worldPosition, MoveToToy.moveSpeed );     
+    MoveToToy.SightObject.MoveTo( %worldPosition, MoveToToy.moveSpeed, true, true );
+}
+
+function MoveToToy::test1(%this)
+{
+    MoveToToy.TargetObject.setPosition("-500 20");
+    MoveToToy.SightObject.setPosition("-500 -20");
+
+
+    MoveToToy.TargetObject.setLinearVelocityX(0);
+    MoveToToy.TargetObject.schedule(1000, "setLinearVelocityX", "150");
+    MoveToToy.SightObject.schedule(1000, "moveTo", "500 -20", "150");
+
+    %this.report();
+}
+
+function MoveToToy::report(%this)
+{
+    echo("Target speed is " @ MoveToToy.TargetObject.getLinearVelocityX() @ " and position is " @ MoveToToy.TargetObject.getPositionX());
+    echo("Sight speed is " @ MoveToToy.SightObject.getLinearVelocityX() @ " and position is " @ MoveToToy.SightObject.getPositionX());
+
+    %this.schedule(1000, "report");
 }
