@@ -28,7 +28,7 @@ Resolution Video::getDesktopResolution()
     NSScreen* mainScreen = [NSScreen mainScreen];
     
     // Get the visible boundaries
-    NSRect screenRect = [mainScreen visibleFrame];
+    NSRect screenRect = [mainScreen frame];
 
     // Get the screen depth. You cannot access depth directly. It must be passed
     // into a function that will return the bpp

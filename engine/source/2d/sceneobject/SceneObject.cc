@@ -202,6 +202,8 @@ SceneObject::SceneObject() :
     VECTOR_SET_ASSOCIATION( mCollisionFixtureDefs );
     VECTOR_SET_ASSOCIATION( mCollisionFixtures );
     VECTOR_SET_ASSOCIATION( mAttachedCtrls );
+    VECTOR_SET_ASSOCIATION( mAudioHandles );
+    VECTOR_SET_ASSOCIATION( mHandleDeletionList );
 
     // Assign scene-object index.
     mSerialId = ++sSceneObjectMasterSerialId;
@@ -256,6 +258,16 @@ SceneObject::~SceneObject()
         mpScene->removeFromScene( this );
     }
 
+    if (mAudioHandles.size())
+    {
+       for (typeAudioHandleVector::iterator itr = mAudioHandles.begin(); itr != mAudioHandles.end(); ++itr)
+       {
+       U32 handle = *itr;
+       alxStop(handle);
+       }
+       mAudioHandles.clear();
+    }
+
     // Decrease scene-object count.
     --sGlobalSceneObjectCount;
 }
@@ -281,35 +293,35 @@ void SceneObject::initPersistFields()
     addProtectedField("Size", TypeVector2, Offset( mSize, SceneObject), &setSize, &defaultProtectedGetFn, &writeSize, "");
 
     /// Position / Angle.
-    addProtectedField("Position", TypeVector2, NULL, &setPosition, &getPosition, &writePosition, "");
-    addProtectedField("Angle", TypeF32, NULL, &setAngle, &getAngle, &writeAngle, "");
-    addProtectedField("FixedAngle", TypeBool, NULL, &setFixedAngle, &getFixedAngle, &writeFixedAngle, "");
+    addProtectedField("Position", TypeVector2, 0, &setPosition, &getPosition, &writePosition, "");
+    addProtectedField("Angle", TypeF32, 0, &setAngle, &getAngle, &writeAngle, "");
+    addProtectedField("FixedAngle", TypeBool, 0, &setFixedAngle, &getFixedAngle, &writeFixedAngle, "");
 
     /// Body.
-    addProtectedField("BodyType", TypeEnum, NULL, &setBodyType, &getBodyType, &writeBodyType, 1, &bodyTypeTable, "" );
-    addProtectedField("Active", TypeBool, NULL, &setActive, &getActive, &writeActive, "" );
-    addProtectedField("Awake", TypeBool, NULL, &setAwake, &getAwake, &writeAwake, "" );
-    addProtectedField("Bullet", TypeBool, NULL, &setBullet, &getBullet, &writeBullet, "" );
-    addProtectedField("SleepingAllowed", TypeBool, NULL, &setSleepingAllowed, &getSleepingAllowed, &writeSleepingAllowed, "" );
+    addProtectedField("BodyType", TypeEnum, 0, &setBodyType, &getBodyType, &writeBodyType, 1, &bodyTypeTable, "" );
+    addProtectedField("Active", TypeBool, 0, &setActive, &getActive, &writeActive, "" );
+    addProtectedField("Awake", TypeBool, 0, &setAwake, &getAwake, &writeAwake, "" );
+    addProtectedField("Bullet", TypeBool, 0, &setBullet, &getBullet, &writeBullet, "" );
+    addProtectedField("SleepingAllowed", TypeBool, 0, &setSleepingAllowed, &getSleepingAllowed, &writeSleepingAllowed, "" );
 
     /// Collision control.
     addProtectedField("CollisionGroups", TypeS32, Offset(mCollisionGroupMask, SceneObject), &setCollisionGroups, &getCollisionGroups, &writeCollisionGroups, "");
     addProtectedField("CollisionLayers", TypeS32, Offset(mCollisionLayerMask, SceneObject), &setCollisionLayers, &getCollisionLayers, &writeCollisionLayers, "");
     addField("CollisionSuppress", TypeBool, Offset(mCollisionSuppress, SceneObject), &writeCollisionSuppress, "");
     addField("CollisionOneWay", TypeBool, Offset(mCollisionOneWay, SceneObject), &writeCollisionOneWay, "");
-    addProtectedField("GatherContacts", TypeBool, NULL, &setGatherContacts, &defaultProtectedGetFn, &writeGatherContacts, "");
+    addProtectedField("GatherContacts", TypeBool, 0, &setGatherContacts, &defaultProtectedGetFn, &writeGatherContacts, "");
     addProtectedField("DefaultDensity", TypeF32, Offset( mDefaultFixture.density, SceneObject), &setDefaultDensity, &defaultProtectedGetFn, &writeDefaultDensity, "");
     addProtectedField("DefaultFriction", TypeF32, Offset( mDefaultFixture.friction, SceneObject), &setDefaultFriction, &defaultProtectedGetFn, &writeDefaultFriction, "");
     addProtectedField("DefaultRestitution", TypeF32, Offset( mDefaultFixture.restitution, SceneObject), &setDefaultRestitution, &defaultProtectedGetFn, &writeDefaultRestitution, "");
 
     /// Velocities.
-    addProtectedField("LinearVelocity", TypeVector2, NULL, &setLinearVelocity, &getLinearVelocity, &writeLinearVelocity, "");
-    addProtectedField("AngularVelocity", TypeF32, NULL, &setAngularVelocity, &getAngularVelocity, &writeAngularVelocity, "");
-    addProtectedField("LinearDamping", TypeF32, NULL, &setLinearDamping, &getLinearDamping, &writeLinearDamping, "");
-    addProtectedField("AngularDamping", TypeF32, NULL, &setAngularDamping, &getAngularDamping, &writeAngularDamping, "");
+    addProtectedField("LinearVelocity", TypeVector2, 0, &setLinearVelocity, &getLinearVelocity, &writeLinearVelocity, "");
+    addProtectedField("AngularVelocity", TypeF32, 0, &setAngularVelocity, &getAngularVelocity, &writeAngularVelocity, "");
+    addProtectedField("LinearDamping", TypeF32, 0, &setLinearDamping, &getLinearDamping, &writeLinearDamping, "");
+    addProtectedField("AngularDamping", TypeF32, 0, &setAngularDamping, &getAngularDamping, &writeAngularDamping, "");
 
     /// Gravity scaling.
-    addProtectedField("GravityScale", TypeF32, NULL, &setGravityScale, &getGravityScale, &writeGravityScale, "");
+    addProtectedField("GravityScale", TypeF32, 0, &setGravityScale, &getGravityScale, &writeGravityScale, "");
 
     /// Render visibility.
     addField("Visible", TypeBool, Offset(mVisible, SceneObject), &writeVisible, "");
@@ -563,6 +575,9 @@ void SceneObject::preIntegrate( const F32 totalTime, const F32 elapsedTime, Debu
 		updateSize(elapsedTime);
 	}
 
+    if (mAudioHandles.size())
+        refreshsources();
+
    // Finish if nothing is dirty.
     if ( !mSpatialDirty )
         return;
@@ -640,6 +655,17 @@ void SceneObject::integrateObject( const F32 totalTime, const F32 elapsedTime, D
 	{
 		updateBlendColor( elapsedTime );
 	}
+
+    if (mAudioHandles.size())
+    {
+        for (typeAudioHandleVector::iterator itr = mAudioHandles.begin(); itr != mAudioHandles.end(); ++itr)
+        {
+            U32 handle = *itr;
+            Point2F vel = getLinearVelocity();
+            alxSource3f(handle, AL_POSITION, position.x, position.y, 0.f);
+            alxSource3f(handle, AL_VELOCITY, vel.x, vel.y, 0.f);
+        }
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -860,6 +886,24 @@ void SceneObject::sceneRenderOverlay( const SceneRenderState* sceneRenderState )
     if ( debugMask & Scene::SCENE_DEBUG_SORT_POINTS )
     {
         pScene->mDebugDraw.DrawSortPoint( getRenderPosition(), getSize(), mSortPoint );
+    }
+
+    if (debugMask & Scene::SCENE_DEBUG_AUDIO_SOURCES)
+    {
+        if (mAudioHandles.size())
+        {
+            for (typeAudioHandleVector::iterator itr = mAudioHandles.begin(); itr != mAudioHandles.end(); ++itr)
+            {
+                U32 handle = *itr;
+                ALfloat MaxDistance = 0.f;
+                ALfloat RefDistance = 0.f;
+                alxGetSourcef(handle, AL_MAX_DISTANCE, &MaxDistance);
+                alxGetSourcef(handle, AL_REFERENCE_DISTANCE, &RefDistance);
+                pScene->mDebugDraw.DrawCircle(getRenderPosition(), MaxDistance, ColorF(1.f, 0.2f, 0.2f));
+                pScene->mDebugDraw.DrawCircle(getRenderPosition(), RefDistance, ColorF(1.f, 0.0f, 0.0f));
+            }
+        }
+        
     }
 }
 
@@ -4029,6 +4073,56 @@ bool SceneObject::writeField(StringTableEntry fieldname, const char* value)
 
    return true;
 }
+
+void SceneObject::addAudioHandle(AUDIOHANDLE handle)
+{
+   mAudioHandles.push_back_unique(handle);
+   Con::printf("New Vector size : %i", mAudioHandles.size());
+}
+
+S32 SceneObject::getSoundsCount(void)
+{
+    return mAudioHandles.size();
+}
+
+U32 SceneObject::getSound(S32 index)
+{
+    if (mAudioHandles.size() - 1 < index)
+        return NULL_AUDIOHANDLE;
+    U32 handle = mAudioHandles[index];
+    return handle;
+}
+
+void SceneObject::refreshsources()
+{
+if (mAudioHandles.size())
+{
+    S32 index = 0;
+    for (typeAudioHandleVector::iterator itr = mAudioHandles.begin(); itr != mAudioHandles.end(); ++itr)
+    {
+        U32 handle = *itr;
+
+        if (handle)
+        {
+            if (!alxIsValidHandle(handle))
+            mHandleDeletionList.push_back(index);
+
+            index++;
+        }
+    }
+        
+    if (mHandleDeletionList.size())
+    {
+
+        for (Vector<S32>::iterator delitr = mHandleDeletionList.begin(); delitr != mHandleDeletionList.end(); ++delitr)
+        {
+            mAudioHandles.erase(*delitr);
+        }
+            mHandleDeletionList.clear();
+    }
+}
+}
+
 
 //------------------------------------------------------------------------------
 
